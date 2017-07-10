@@ -1,4 +1,5 @@
 from typing import *
+from copy import copy
 
 
 class Clause:
@@ -23,53 +24,60 @@ class Clause:
 
 
 class VarInfo:
-    rev: Dict[Clause, bool] = {}  # role(+-) of its occurrences in each clause
+    rev: Dict[Clause, bool]  # role(+-) of its occurrences in each clause
     # number of negatively and/or positively occurrences
-    stat: List[int] = [0, 0]
+    stat: List[int]
     n_: int
 
     def __init__(self, n: int):
         self.n_ = n
+        self.stat = [0, 0]
+        self.rev = {}
 
 
 class Formula:
     # the following members are managed by push & pop, used in the recursive process
-    cnf: Dict[int, Clause] = {}
+    raw : List[List[int]]
+    cnf: Dict[int, Clause]
     var: List[VarInfo]
-    assignment: Dict[int, Tuple[bool, # value
+    var_value: Dict[int, Tuple[bool,  # value
                                 int,  # depth
-                                Set[int]  # any edge table
-    ] ] = {}
+                                Optional[Set[int]] ] ]  # any edge table
+    model: Optional[List[int]]
     changes: List[Tuple[int, bool]]
     frame: List[int]
-    depth = 0
+    depth: int
 
-    one: Set[Clause] # guaranteed to be size 0 after bcp exits FIXME: 递归函数里面使用全局变量小心不同层被改写！
-    zero: Optional[List[int]] = None #not None during the inflating process(backjumping)
+    one: Set[Clause] # guaranteed to be size 0 after bcp exits
+    zero: Optional[List[int]] #not None during the inflating process(backjumping)
 
-    def assign(self, var: int, value: bool,
+    def get_var(self, x) -> VarInfo: return self.var[abs(x) - 1]
+
+    def assign(self, _var: int, value: bool,
                cause: Optional[Set[int]] = None) -> None:
-        for cl, val in self.var[var].rev:
+        self.var_value[_var] = (value, self.depth,
+                                None if cause is None else copy(cause))
+        for cl, val in self.get_var(_var).rev.items():
+            x = cl.def_(_var * (-1 + 2 * val))
             if val == value:
-                self.before_cl_removed(cl)
+                self.before_unmount(cl)
                 del self.cnf[cl.i_]
             else:
-                x = cl.def_( val)
                 if x == 0:
                     self.one.remove(cl)
-                    self.zero = list(cl.undef)
+                    self.zero = list(cl.defined)
                 elif x == 1:
                     self.one.add(cl)
-        self.assignment[var] = (value, self.depth, cause)
-        self.changes.append((var, value))
+        self.changes.append((_var, value))
 
-    def unassign(self, var: int, value: bool) -> None:
-        del self.assignment[var]
-        for cl, val in reversed(self.var[var].rev):
+    def unassign(self, _var: int, value: bool) -> None:
+        for cl, val in self.get_var(_var).rev.items(): # FIXME rev是不可靠的，因为会新产生从句，导致rev变大
+            #TODO 新开一个list真的记一下这些修改，这是容易办到的事情
             if val == value:
                 self.cnf[cl.i_] = cl
-                self.after_cl_born(cl)
-            else: cl.undef_(val)
+                self.after_mounted(cl)
+            cl.undef_(_var * (-1 + 2 * val))
+        del self.var_value[_var]
 
     def push(self) -> None:
         self.depth += 1
@@ -82,16 +90,17 @@ class Formula:
             self.unassign(x, y)
         self.depth -= 1
 
-    def after_cl_born(self, cl: Clause) -> None:
+    def after_mounted(self, cl: Clause) -> None:
         for x in cl.undef:
-            self.var[abs(x)].rev[cl] = x > 0
-            self.var[abs(x)].stat[x > 0] += 1
+            self.get_var(x).rev[cl] = x > 0
+            self.get_var(x).stat[x > 0] += 1
+            assert self.get_var(x).stat[x > 0] <= 2 #TODO 这个数据调完删掉
 
-    def before_cl_removed(self, cl: Clause) -> None:
+    def before_unmount(self, cl: Clause) -> None:
         for x in cl.undef:
-            self.var[abs(x)].stat[x > 0] -= 1
-            assert self.var[abs(x)].stat[x > 0] >= 0
-            del self.var[abs(x)].rev[cl]
+            self.get_var(x).stat[x > 0] -= 1
+            assert self.get_var(x).stat[x > 0] >= 0
+            del self.get_var(x).rev[cl]
 
     def bcp(self) -> bool:
         while (self.zero is not None) or len(self.one):
@@ -107,9 +116,27 @@ class Formula:
     def add_clause(self, cl) -> None:
         i = len(self.cnf)
         tp = self.cnf[i] = Clause(cl, i)
-        self.after_cl_born(tp)
+        self.after_mounted(tp)
+
 
     def __init__(self, n: int, cnf1: List[List[int]]):
-        self.var = [VarInfo(i) for i in range(n)]
+        self.var = [VarInfo(1 + i) for i in range(n)]
+        self.raw = cnf1
+        self.depth = 0
+        self.cnf = {}
+        self.var_value = {}
+        self.model= None
+        self.changes = []
+        self.frame  = []
+        self.one = set()
+        self.zero = None
         for cl in cnf1: self.add_clause(cl)
+
+    def validate(self) -> None:
+        n = len(self.var)
+        self.model = { (i + 1) : False for i in range(n)}
+        for x, (y, p1, p2) in self.var_value.items():
+            self.model[x] = y
+        assert all([any([self.model[abs(j)] == (j > 0) for j in i]) for i in self.raw])
+
 
