@@ -1,5 +1,4 @@
 from typing import *
-from enum import IntEnum
 
 
 class Clause:
@@ -91,6 +90,7 @@ class Formula:
     def before_cl_removed(self, cl: Clause) -> None:
         for x in cl.undef:
             self.var[abs(x)].stat[x > 0] -= 1
+            assert self.var[abs(x)].stat[x > 0] >= 0
             del self.var[abs(x)].rev[cl]
 
     def bcp(self) -> bool:

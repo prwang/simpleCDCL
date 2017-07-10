@@ -34,27 +34,50 @@ class CdclEngine(Formula):
             if dep < self.depth or edg is None:
                 yield (i1, edg is None)
             else: yield from self.inflate_cause(edg)
-
-    def step(self) -> None:
+#TODO 这里先乱写一个能用的，调通了再改
+    def decide(self) -> bool: #True if already satisfied
+        dc = (0, 0, False)
+        for p in self.var:
+            if p.n_ not in self.assignment and (p.stat[0] + p.stat[1]):
+                if not p.stat[0]: # pure
+                    self.assign(p.n_, True, None)
+                    return False
+                elif not p.stat[1]:
+                    self.assign(p.n_, False, None)
+                    return False
+                elif p.stat[0] > dc[0]:
+                    dc = (p.stat[0], p.n_, False)
+                elif p.stat[1] > dc[0]:
+                    dc = (p.stat[1], p.n_, True)
+        if dc[0] == 0:
+            assert len(self.cnf) == 0;
+            return True
+        x, y, w = dc
+        self.assign(y, w, None)
+        return False
+    def step(self) -> bool: #throws IndexError
         if self.bcp():
             self.push()
-            # decide例程，同时处理成功的情况，以及pure的情况
-            pass
-        else:
-            #  在下面判断，否则如果出现同阶自由变量则表示应该直接加入，并且删掉changes
-            assert(self.zero)
-            newlst: List[Tuple[int, bool]] = list(self.inflate_cause(self.zero))
-            # 这里会出现x or -x吗 ?
-            self.zero = [x[0] for x in newlst]
-            if any(x[1] for x in newlst):
-                self.add_clause(self.zero)
-                self.zero = None
-            self.pop()
+            if self.decide(): return True
+            elif self.zero is None: return False
+        assert(self.zero)
+        newlst: List[Tuple[int, bool]] = list(self.inflate_cause(self.zero))
+        # 这里会出现x or -x吗 ?
+        self.zero = [x[0] for x in newlst]
+        if any(x[1] for x in newlst):
+            self.add_clause(self.zero)
+            self.zero = None
+        self.pop()
+        return False
+    def solve(self) -> bool:
+        try:
+            while not self.step(): pass
+
+            return True
+        except IndexError:
+            return False
             #pop两次当且仅当所有的返回项都是低阶项，TODO 反复思考这里的正确性
 
-
-
-    #TODO 哪一步调push(), 哪一步pop()
+    # 哪一步调push(), 哪一步pop()
     # 向下走，push(), 向上走pop()，走向sibling: pop() & push()
     #最开始做了0次假设，每push一次代表多做了一次假设
-    #
