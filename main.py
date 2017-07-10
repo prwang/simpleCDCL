@@ -19,8 +19,8 @@ def parse() -> Tuple[int, List]:
         cc = []
         for num in map(int, tokens[4:]):
             if num == 0:
+                cc = list(set(cc))
                 if len(cc):
-                    # (not x or x) = true
                     cc.sort(key = abs)
                     x = len(cc) - 1; i = 0
                     while i < x:
@@ -31,9 +31,9 @@ def parse() -> Tuple[int, List]:
         if len(cc): clauses.append(cc)
         assert(len(cc) == m)
         return n, clauses
-    except (ValueError, AssertionError):
+    except (ValueError, AssertionError) as e:
         print("invalid cnf format")
-        exit(1)
+        raise e
 
 
 def main() -> None:
