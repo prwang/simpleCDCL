@@ -1,8 +1,7 @@
 from typing import *
 import sys
 import itertools as It
-from search import CdclEngine
-
+from formula import Formula
 
 def parse() -> Tuple[int, List]:
     tokens = iter([])
@@ -21,19 +20,12 @@ def parse() -> Tuple[int, List]:
         cc = []
         for num in map(int, tokens[4:]):
             if num == 0:
-                cc = list(set(cc))
                 if len(cc):
-                    cc.sort(key=abs)
-                    N = len(cc) - 1; i = 0
-                    while i < N:
-                        if abs(cc[i]) == abs(cc[i + 1]): break
-                        i += 1
-                    if i == N:
-                        clauses.append(cc)
+                    clauses.append(cc)
                     cc = []
             else: cc.append(num)
         if len(cc): clauses.append(cc)
-        assert(len(clauses) == m)
+        assert(len(clauses) == m) #FIXME
         return n, clauses
     except (ValueError, AssertionError) as e:
         print("invalid cnf format")
@@ -42,7 +34,7 @@ def parse() -> Tuple[int, List]:
 
 def main() -> None:
     n, M = parse()
-    fm = CdclEngine(n, M)
+    fm = Formula(n, M)
     if fm.solve():
         print('sat')
         for i in range(1, n + 1):
@@ -53,6 +45,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    sys.stdin = open('in.cnf', 'r')
+    sys.stdin = open('./testfiles/aim/aim-50-1_6-no-1.cnf', 'r')
     main()
 
