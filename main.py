@@ -36,9 +36,12 @@ def parse() -> Tuple[int, List]:
         raise e
 
 def main() -> None:
-    logging.basicConfig(filename='logs/run%s.log'%
-                                 re.sub('\W+','_', str(datetime.now()))
-                        , level=logging.DEBUG)
+    try:
+        logging.basicConfig(filename='logs/run%s.log'%
+                                     re.sub('\W+','_', str(datetime.now()))
+                            , level=logging.DEBUG)
+    except FileNotFoundError:
+        logging.disable(2333)
     logging.info('original file is:')
     n, M = parse()
     fm = Formula(n, M)

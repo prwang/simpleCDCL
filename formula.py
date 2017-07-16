@@ -40,13 +40,13 @@ class VarInfo:
 
 
 class Formula:
-    __slots__ = ('raw', 'cnf', 'var', 'var_value',
+    __slots__ = ('raw', 'cnf', 'var_info', 'var_value',
                  'model', 'changes', 'frame', 'depth',
                  'one', 'zero', 'clacnt', 'curstep')
     # # the following members are managed by push & pop, used in the recursive process
     # raw: List[List[int]]
     # cnf: Dict[int, Clause]
-    # var: List[VarInfo]
+    # var_info: List[VarInfo]
     # var_value: Dict[int, Tuple[bool,  # value
     #                            int,  # depth
     #                            Optional[Set[int]]]]  # any edge table
@@ -60,7 +60,7 @@ class Formula:
     # zero: Optional[List[int]]  # not None during the inflating process(backjumping)
     # curstep : int
     def get_var(self, x: int) -> VarInfo:
-        return self.var[abs(x) - 1]
+        return self.var_info[abs(x) - 1]
 
     def assign(self, _var: int, value: bool,
                cause: Optional[Set[int]] = None) -> None:
@@ -156,7 +156,7 @@ class Formula:
         self.clacnt += 1
 
     def __init__(self, n: int, cnf1: List[List[int]]):
-        self.var = [VarInfo(1 + i) for i in range(n)]
+        self.var_info = [VarInfo(1 + i) for i in range(n)]
         self.raw = cnf1
         self.clacnt = self.depth = 0
         self.cnf = {}
@@ -170,7 +170,7 @@ class Formula:
         for cl in cnf1: self.add_clause(cl)
 
     def validate(self) -> None:
-        n = len(self.var)
+        n = len(self.var_info)
         self.model = {(i + 1): False for i in range(n)}
         for x, (y, p1, p2) in self.var_value.items():
             self.model[x] = y
@@ -182,7 +182,7 @@ class Formula:
             if len(cl.undef) == 0:
                 assert False
         dc = (0, 0, False)
-        for p in self.var:
+        for p in self.var_info:
             assert(p.n_ > 0)
             if p.n_ not in self.var_value and (p.stat[0] + p.stat[1]):
                 if not p.stat[0]:  # pure
