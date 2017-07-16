@@ -2,6 +2,9 @@ from typing import *
 import sys
 import itertools as It
 from formula import Formula
+import logging
+from datetime import datetime
+import re
 
 def parse() -> Tuple[int, List]:
     tokens = iter([])
@@ -10,6 +13,7 @@ def parse() -> Tuple[int, List]:
             line1 = list(filter(None, input().strip().split()))
             if len(line1) and line1[0] != 'c':
                 tokens = It.chain(tokens, line1)
+                logging.debug(line1)
     except EOFError:
         pass
     clauses = []
@@ -25,14 +29,17 @@ def parse() -> Tuple[int, List]:
                     cc = []
             else: cc.append(num)
         if len(cc): clauses.append(cc)
-        assert(len(clauses) == m) #FIXME
+        assert(len(clauses) == m)
         return n, clauses
     except (ValueError, AssertionError) as e:
         print("invalid cnf format")
         raise e
 
-
 def main() -> None:
+    logging.basicConfig(filename='run%s.log'%
+                                 re.sub('\W+','_', str(datetime.now()))
+                        , level=logging.DEBUG)
+    logging.debug('original file is:')
     n, M = parse()
     fm = Formula(n, M)
     if fm.solve():
@@ -45,6 +52,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    sys.stdin = open('./testfiles/aim/aim-50-1_6-no-1.cnf', 'r')
+    sys.stdin = open('in.cnf', 'r', encoding='utf-8')
     main()
 
