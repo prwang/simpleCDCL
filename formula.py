@@ -122,6 +122,9 @@ class Formula:
         #logging.debug('pop called, depth = %d' % self.depth)
 
     def bcp(self) -> bool:
+        if self.zero is not None:
+            #logging.debug('bcp returned false!')
+            return False
         self.one = {i for k, i in self.cnf.items() if len(i.undef) == 1}
         while (self.zero is not None) or len(self.one):
             if self.zero is not None:
@@ -220,7 +223,7 @@ class Formula:
                 return True
             elif self.zero is None:
                 return False
-        assert self.zero
+        assert self.zero is not None
         self.one.clear()
         #logging.debug('::zero = ' + str(self.zero))
         newlst = list(inflate_cause(self.zero))
