@@ -7,7 +7,7 @@ in python, without the *unique implication points* optimization.
 
 ## Key points in implementation
 
-* several dicts(inside ```var_info, var_value```) is maintained for fast lookup for unit clauses 
+* several dicts(inside ```var_info, var_value```) are maintained for fast lookup for unit clauses 
 * use of python generator(source: ```step.inflate_clause()```) when calculating *causes_of* (see the paper in page #5, formula (3))
 * iterative(not recursive)(source: ```step() push() pop()```) approach of main DFS procedure
   * note: instead of exact undoing the side-effects(removing the entire clause when satisfied or removing the literal
@@ -17,7 +17,7 @@ in python, without the *unique implication points* optimization.
 
 ## Benchmarks
 
-open tests
+open tests: python3.61/archlinux/HyperV/Core i7 6820HQ@2.8GHZ (time in seconds)
 
 <table>
 <tbody>
