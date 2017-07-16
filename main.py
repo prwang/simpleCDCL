@@ -13,7 +13,7 @@ def parse() -> Tuple[int, List]:
             line1 = list(filter(None, input().strip().split()))
             if len(line1) and line1[0] != 'c':
                 tokens = It.chain(tokens, line1)
-                logging.debug(line1)
+                logging.info(line1)
     except EOFError:
         pass
     clauses = []
@@ -36,22 +36,21 @@ def parse() -> Tuple[int, List]:
         raise e
 
 def main() -> None:
-    logging.basicConfig(filename='run%s.log'%
+    logging.basicConfig(filename='logs/run%s.log'%
                                  re.sub('\W+','_', str(datetime.now()))
-                        , level=logging.DEBUG)
-    logging.debug('original file is:')
+                        , level=logging.INFO)
+    logging.info('original file is:')
     n, M = parse()
     fm = Formula(n, M)
     if fm.solve():
-        print('sat')
-        for i in range(1, n + 1):
-            print("var_%d = %d"%(i, fm.model[i]))
+        print('s SATISFIABLE')
+        #logging.debug(str(fm.model))
     else:
-        print('unsat')
+        print('s UNSATISFIABLE')
 
 
 
 if __name__ == "__main__":
-    sys.stdin = open('in.cnf', 'r', encoding='utf-8')
+    sys.stdin = open(sys.argv[1], 'r', encoding='utf-8')
     main()
 

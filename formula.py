@@ -42,7 +42,7 @@ class VarInfo:
 class Formula:
     __slots__ = ('raw', 'cnf', 'var', 'var_value',
                  'model', 'changes', 'frame', 'depth',
-                 'one', 'zero', 'clacnt')
+                 'one', 'zero', 'clacnt', 'curstep')
     # the following members are managed by push & pop, used in the recursive process
     raw: List[List[int]]
     cnf: Dict[int, Clause]
@@ -58,12 +58,13 @@ class Formula:
 
     one: Set[Clause]  # guaranteed to be size 0 after bcp exits
     zero: Optional[List[int]]  # not None during the inflating process(backjumping)
-
+    curstep : int
     def get_var(self, x) -> VarInfo:
         return self.var[abs(x) - 1]
 
     def assign(self, _var: int, value: bool,
                cause: Optional[Set[int]] = None) -> None:
+        assert(_var > 0)
         self.var_value[_var] = (value, self.depth,
                                 None if cause is None else copy(cause))
         self.changes.append(_var)
@@ -71,6 +72,7 @@ class Formula:
             x = cl.def_(_var * (-1 + 2 * role))
             if role == value:
                 self.before_unmount(cl, _var) # privatize these clauses
+                self.one.discard(cl)
                 del self.cnf[cl.i_]
             else:
                 if x == 0:
@@ -95,10 +97,11 @@ class Formula:
 
     def push(self) -> None:
         self.depth += 1
-        logging.debug('push called, depth = %d' % self.depth)
+        #logging.debug('push called, depth = %d' % self.depth)
         self.frame.append(len(self.changes))
 
     def unassign(self, _var: int) -> None:
+        assert(_var > 0)
         value = self.var_value[_var][0]
         for cl, role in self.get_var(_var).rev.items():
             if role == value:
@@ -116,27 +119,27 @@ class Formula:
             else:
                 assert False
         self.depth -= 1
-        logging.debug('pop called, depth = %d' % self.depth)
+        #logging.debug('pop called, depth = %d' % self.depth)
 
     def bcp(self) -> bool:
         self.one = {i for k, i in self.cnf.items() if len(i.undef) == 1}
         while (self.zero is not None) or len(self.one):
             if self.zero is not None:
-                logging.debug('bcp returned false!')
+                #logging.debug('bcp returned false!')
                 return False
             y = self.one.pop()
             assert (len(y.undef) == 1)
             m = next(iter(y.undef))
             self.assign(abs(m), m > 0, y.defined)
-            logging.debug('--must assign %d to var_%d because %s' % (
-                m > 0, abs(m), str(y.defined)))
+            #logging.debug('--must assign %d to var_%d because %s' % ( m > 0, abs(m), str(y.defined)))
         return True
 
     def add_clause(self, cl: Iterable[int]) -> None:
         ud, dd = (set(), set())
         for x in cl:
-            if x in self.var_value:
-                assert self.var_value[x][0] != (x > 0)
+            x1 = abs(x)
+            if x1 in self.var_value:
+                assert self.var_value[x1][0] != (x > 0)
                 dd.add(x)
             else:
                 ud.add(x)
@@ -156,6 +159,7 @@ class Formula:
         self.frame = []
         self.one = set()
         self.zero = None
+        self.curstep = 0
         for cl in cnf1: self.add_clause(cl)
 
     def validate(self) -> None:
@@ -172,6 +176,7 @@ class Formula:
                 assert False
         dc = (0, 0, False)
         for p in self.var:
+            assert(p.n_ > 0)
             if p.n_ not in self.var_value and (p.stat[0] + p.stat[1]):
                 if not p.stat[0]:  # pure
                     dc = (p.stat[1], p.n_, True)
@@ -188,7 +193,7 @@ class Formula:
             return True  # SAT
         x, y, w = dc
         self.assign(y, w, None)
-        logging.debug('--decided to assign %d to var_%d' % (w, y))
+        #logging.debug('--decided to assign %d to var_%d' % (w, y))
         return False
 
     def step(self) -> bool:  # throws IndexError
@@ -200,10 +205,11 @@ class Formula:
                 # if it's been an positive assignment before,
                 # now it's to be forced false, and vice versa
                 if dep < self.depth or edg is None:
-                    yield (i1, edg is None)
+                    yield (i1, dep == self.depth and edg is None)
                 else:
                     yield from inflate_cause(edg)
-
+        self.curstep += 1
+        logging.info('current step is: %d, depth = %d'%(self.curstep, self.depth))
         if self.bcp():
             self.push()
             if self.decide():
@@ -212,7 +218,7 @@ class Formula:
                 return False
         assert self.zero
         self.one.clear()
-        logging.debug('::zero = ' + str(self.zero))
+        #logging.debug('::zero = ' + str(self.zero))
         newlst: List[Tuple[int, bool]] = list(inflate_cause(self.zero))
         self.zero = {x[0] for x in newlst}
         self.pop()  # must pop at first, or getting wrong number of undecided vars
