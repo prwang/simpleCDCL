@@ -6,9 +6,9 @@ import logging
 
 class Clause:
     __slots__ = ('undef', 'defined', 'i_')
-    undef: Set[int]
-    defined: Set[int]
-    i_: int
+    # undef: Set[int]
+    # defined: Set[int]
+    # i_: int
 
     def __init__(self, undef: Iterable[int], defined: Iterable[int], i_: int):
         self.undef = set(undef)
@@ -27,11 +27,11 @@ class Clause:
 
 class VarInfo:
     __slots__ = ('n_', 'stat', 'rev')
-    undef: Set[int]
-    rev: Dict[Clause, bool]  # role(+-) of its occurrences in each clause
-    # number of negatively and/or positively occurrences
-    stat: List[int]
-    n_: int
+    # undef: Set[int]
+    # rev: Dict[Clause, bool]  # role(+-) of its occurrences in each clause
+    # # number of negatively and/or positively occurrences
+    # stat: List[int]
+    # n_: int
 
     def __init__(self, n: int):
         self.n_ = n
@@ -43,23 +43,23 @@ class Formula:
     __slots__ = ('raw', 'cnf', 'var', 'var_value',
                  'model', 'changes', 'frame', 'depth',
                  'one', 'zero', 'clacnt', 'curstep')
-    # the following members are managed by push & pop, used in the recursive process
-    raw: List[List[int]]
-    cnf: Dict[int, Clause]
-    var: List[VarInfo]
-    var_value: Dict[int, Tuple[bool,  # value
-                               int,  # depth
-                               Optional[Set[int]]]]  # any edge table
-    model: Optional[List[int]]
-    changes: List[int]
-    frame: List[int]
-    depth: int
-    clacnt: int
+    # # the following members are managed by push & pop, used in the recursive process
+    # raw: List[List[int]]
+    # cnf: Dict[int, Clause]
+    # var: List[VarInfo]
+    # var_value: Dict[int, Tuple[bool,  # value
+    #                            int,  # depth
+    #                            Optional[Set[int]]]]  # any edge table
+    # model: Optional[List[int]]
+    # changes: List[int]
+    # frame: List[int]
+    # depth: int
+    # clacnt: int
 
-    one: Set[Clause]  # guaranteed to be size 0 after bcp exits
-    zero: Optional[List[int]]  # not None during the inflating process(backjumping)
-    curstep : int
-    def get_var(self, x) -> VarInfo:
+    # one: Set[Clause]  # guaranteed to be size 0 after bcp exits
+    # zero: Optional[List[int]]  # not None during the inflating process(backjumping)
+    # curstep : int
+    def get_var(self, x: int) -> VarInfo:
         return self.var[abs(x) - 1]
 
     def assign(self, _var: int, value: bool,
@@ -219,7 +219,7 @@ class Formula:
         assert self.zero
         self.one.clear()
         #logging.debug('::zero = ' + str(self.zero))
-        newlst: List[Tuple[int, bool]] = list(inflate_cause(self.zero))
+        newlst = list(inflate_cause(self.zero))
         self.zero = {x[0] for x in newlst}
         self.pop()  # must pop at first, or getting wrong number of undecided vars
         if any(x[1] for x in newlst):
