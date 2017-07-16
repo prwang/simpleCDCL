@@ -16,7 +16,7 @@ class Clause:
         self.i_ = i_
 
     def def_(self, other: int) -> int:
-        self.undef.remove(other)
+        self.undef.remove(other) #FIXME keyError:
         self.defined.add(other)
         return len(self.undef)
 
@@ -136,6 +136,10 @@ class Formula:
 
     def add_clause(self, cl: Iterable[int]) -> None:
         ud, dd = (set(), set())
+        cl = sorted(list(set(cl)), key=abs)
+        if any(abs(cl[i]) == abs(cl[i + 1]) for i in range(len(cl) - 1)):
+            logging.info('useless clause: %s'%str(cl))
+            return
         for x in cl:
             x1 = abs(x)
             if x1 in self.var_value:

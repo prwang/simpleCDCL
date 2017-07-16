@@ -38,7 +38,7 @@ def parse() -> Tuple[int, List]:
 def main() -> None:
     logging.basicConfig(filename='logs/run%s.log'%
                                  re.sub('\W+','_', str(datetime.now()))
-                        , level=logging.INFO)
+                        , level=logging.DEBUG)
     logging.info('original file is:')
     n, M = parse()
     fm = Formula(n, M)
